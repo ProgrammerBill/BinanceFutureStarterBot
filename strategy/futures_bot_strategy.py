@@ -34,24 +34,25 @@ class BasicBotStrategy:
         positions = self.client.futures_account()["positions"]
         for position in positions:
             symbol_tmp = position["symbol"]
-            qty = float(position["positionAmt"])  # 当前持仓数量
-            if qty != 0:  # 如果持有该合约的仓位不为0，则需要平仓
-                print("qty is", qty)
-                if qty > 0:  # 如果是多头仓位，则需要卖出平仓
-                    self.client.futures_create_order(
-                        symbol=symbol_tmp,
-                        side=SIDE_SELL,
-                        type=ORDER_TYPE_MARKET,
-                        quantity=abs(qty),
-                    )
-                elif qty < 0:  # 如果是空头仓位，则需要买入平仓
-                    self.client.futures_create_order(
-                        symbol=symbol_tmp,
-                        side=SIDE_BUY,
-                        type=ORDER_TYPE_MARKET,
-                        quantity=abs(qty),
-                    )
-                print("close order with qty:", qty)
+            if symbol_tmp == self.symbol:
+                qty = float(position["positionAmt"])  # 当前持仓数量
+                if qty != 0:  # 如果持有该合约的仓位不为0，则需要平仓
+                    print("qty is", qty)
+                    if qty > 0:  # 如果是多头仓位，则需要卖出平仓
+                        self.client.futures_create_order(
+                            symbol=symbol_tmp,
+                            side=SIDE_SELL,
+                            type=ORDER_TYPE_MARKET,
+                            quantity=abs(qty),
+                        )
+                    elif qty < 0:  # 如果是空头仓位，则需要买入平仓
+                        self.client.futures_create_order(
+                            symbol=symbol_tmp,
+                            side=SIDE_BUY,
+                            type=ORDER_TYPE_MARKET,
+                            quantity=abs(qty),
+                        )
+                    print("close order with qty:", qty)
 
     def should_open_long(self):
         # 如果已经有持仓，则不需要再开仓
@@ -67,10 +68,10 @@ class BasicBotStrategy:
         first_close_price = float(last_klines[0][4])
         last_close_price = float(last_klines[-1][4])
         if last_close_price > first_close_price:
-            print("总体趋势是上涨, 买多")
-            return True
-        else:
+            print("总体趋势是上涨, 买空")
             return False
+        else:
+            return True
 
     def should_open_short(self):
         # 如果已经有持仓，则不需要再开仓

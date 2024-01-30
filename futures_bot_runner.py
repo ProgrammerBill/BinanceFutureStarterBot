@@ -45,12 +45,11 @@ min_notional = 0
 info = client.get_exchange_info()
 
 # 在交易对信息中查找特定symbol的信息
-for symbol_info in info['symbols']:
-    if symbol_info['symbol'] == symbol:
-        print(symbol_info)
-        for filter in symbol_info['filters']:
-            if filter['filterType'] == 'NOTIONAL':
-                min_notional = float(filter['minNotional'])
+for symbol_info in info["symbols"]:
+    if symbol_info["symbol"] == symbol:
+        for filter in symbol_info["filters"]:
+            if filter["filterType"] == "NOTIONAL":
+                min_notional = float(filter["minNotional"])
                 print("min_notional:", min_notional)
                 break
 
@@ -71,29 +70,8 @@ print(response)
 # print(response)
 
 print("symbol is:", symbol)
-# 开始前先取消所有挂单
+# 开始前先取消所有symbol的挂单
 strategy.close_all()
-
-#EXPECT_LONG_FIRST = True
-## 通过K线判断是买空还是买多, 后续调整策略
-#klines = client.get_historical_klines(
-#    symbol, Client.KLINE_INTERVAL_15MINUTE, "1 day ago UTC"
-#)
-#last_klines = klines[-3:]
-## 比较最早一次和最后一次K线的收盘价
-#first_close_price = float(last_klines[0][4])
-#last_close_price = float(last_klines[-1][4])
-#if last_close_price > first_close_price:
-#    print("总体趋势是上涨, 买多")
-#    EXPECT_LONG_FIRST = True
-#else:
-#    print("总体趋势是下跌, 买空")
-#    EXPECT_LONG_FIRST = False
-#
-#if EXPECT_LONG_FIRST:
-#    order = strategy.open_long(quantity)
-#else:
-#    order = strategy.open_short(quantity)
 
 while True:
     print("--------------------------------------------------")
@@ -104,20 +82,20 @@ while True:
     print("总未实现盈亏:{:.2f} USDT".format(float(total_unrealized_pnl)))
 
     current_account_info = client.futures_account()
-    # print("总余额:", current_account_info['totalWalletBalance'])
-    print(
-        "当前总盈亏:",
-        float(current_account_info["totalWalletBalance"])
-        - float(account_info["totalWalletBalance"]),
-    )
+    balance = float(current_account_info["totalWalletBalance"]) - float(account_info["totalWalletBalance"])
+    if balance > 0:
+        color_code = "\033[92m"
+    else:
+        color_code = "\033[91m"
+    print(f"{color_code}当前总盈亏:{balance} \033[0m")
 
     position_info = client.futures_position_information(symbol=symbol)
     for position in position_info:
         # 打印每个持仓的未实现盈利
         if float(position["positionAmt"]) != 0:  # 筛选出当前有持仓的合约
             print(
-                f"""Symbol: {position['symbol']}, entryPrice: {position['entryPrice']},
-                markPrice: {position['markPrice']}, Profit: {position['unRealizedProfit']} USDT
+                f"""
+Symbol: {position['symbol']}, entryPrice: {position['entryPrice']}, markPrice: {position['markPrice']}, Profit: {position['unRealizedProfit']} USDT
                 """
             )
 
