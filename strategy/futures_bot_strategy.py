@@ -69,9 +69,9 @@ class BasicBotStrategy:
         last_close_price = float(last_klines[-1][4])
         if last_close_price > first_close_price:
             print("总体趋势是上涨, 买空")
-            return False
-        else:
             return True
+        else:
+            return False
 
     def should_open_short(self):
         # 如果已经有持仓，则不需要再开仓
