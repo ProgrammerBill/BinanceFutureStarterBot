@@ -4,6 +4,26 @@ from binance.enums import *
 import configparser
 import argparse
 from strategy.futures_bot_strategy import BasicBotStrategy
+import prettyprinter
+from datetime import datetime
+
+
+class bcolors:
+    HEADER = "\033[95m"
+    OKBLUE = "\033[94m"
+    OKCYAN = "\033[96m"
+    OKGREEN = "\033[92m"
+    WARNING = "\033[93m"
+    RED = "\033[91m"
+    ENDC = "\033[0m"
+    BOLD = "\033[1m"
+    UNDERLINE = "\033[4m"
+
+
+def pprint_with_timestamp(message):
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"{bcolors.HEADER}[{timestamp}]:{bcolors.ENDC} {message}")
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-t", action="store_true", help="for testnet")
@@ -27,11 +47,6 @@ else:
     api_secret = config.get("binance_user_config", "api_secret")
     client = Client(api_key, api_secret, requests_params={"timeout": 50})
 
-# 获取Futures账户信息
-account_info = client.futures_account()
-# 打印账户总余额
-print("初始总余额:{:.2f} USDT".format(float(account_info["totalWalletBalance"])))
-
 # 使用BasicBotStrategy
 strategy = BasicBotStrategy(client, symbol)
 
@@ -50,18 +65,18 @@ for symbol_info in info["symbols"]:
         for filter in symbol_info["filters"]:
             if filter["filterType"] == "NOTIONAL":
                 min_notional = float(filter["minNotional"])
-                print("min_notional:", min_notional)
+                #print("min_notional:", min_notional)
                 break
 
-print("notional:", notional)
+#print("notional:", notional)
 if notional < min_notional:
     quantity = min_notional / current_price
     quantity = round(quantity, 2)
-    print("fixed notional:", quantity * current_price)
+    #print("fixed notional:", quantity * current_price)
 
 leverage = config.get("binance_user_config", "leverage")
 response = client.futures_change_leverage(symbol=symbol, leverage=leverage)
-print(response)
+#print(response)
 
 # position_mode = client.futures_get_position_mode()
 # print("当前持仓模式:", "双向" if position_mode["dualSidePosition"] else "单向")
@@ -73,30 +88,35 @@ print("symbol is:", symbol)
 # 开始前先取消所有symbol的挂单
 strategy.close_all()
 
+# 获取Futures账户信息
+account_info = client.futures_account()
+# 打印账户总余额
+pprint_with_timestamp(f"{bcolors.OKGREEN}Bot started 初始总余额:{float(account_info['totalWalletBalance']):.2f} USDT{bcolors.ENDC}")
+
 while True:
     print("--------------------------------------------------")
     # 获取账户信息
     info = client.futures_account()
     # 总未实现盈亏
-    total_unrealized_pnl = info["totalUnrealizedProfit"]
-    print("总未实现盈亏:{:.2f} USDT".format(float(total_unrealized_pnl)))
-
+    total_unrealized_pnl = float(info["totalUnrealizedProfit"])
     current_account_info = client.futures_account()
-    balance = float(current_account_info["totalWalletBalance"]) - float(account_info["totalWalletBalance"])
-    if balance > 0:
-        color_code = "\033[92m"
+    balance = float(current_account_info["totalWalletBalance"]) - float(
+        account_info["totalWalletBalance"]
+    )
+    if total_unrealized_pnl > 0:
+        color_code = bcolors.OKGREEN
     else:
-        color_code = "\033[91m"
-    print(f"{color_code}当前总盈亏:{balance} \033[0m")
+        color_code = bcolors.RED
+    pprint_with_timestamp(
+        f"{color_code}总未实现盈亏:{total_unrealized_pnl:.2f} 当前总盈亏: {balance:.2f} USDT{bcolors.ENDC}"
+    )
 
     position_info = client.futures_position_information(symbol=symbol)
     for position in position_info:
         # 打印每个持仓的未实现盈利
         if float(position["positionAmt"]) != 0:  # 筛选出当前有持仓的合约
-            print(
-                f"""
-Symbol: {position['symbol']}, entryPrice: {position['entryPrice']}, markPrice: {position['markPrice']}, Profit: {position['unRealizedProfit']} USDT
-                """
+            pprint_with_timestamp(
+                f"{color_code}Symbol: {position['symbol']}, entryPrice: {float(position['entryPrice']):.4f}, markPrice: {float(position['markPrice']):.4f}, Profit: {float(position['unRealizedProfit']):.2f} USDT {bcolors.ENDC}"
             )
 
     if strategy.should_open_long():
@@ -111,5 +131,5 @@ Symbol: {position['symbol']}, entryPrice: {position['entryPrice']}, markPrice: {
     ):
         # 执行平仓操作
         sell_order = strategy.close_all()
-        print(f"Sold at {strategy.get_price()}")
+        pprint_with_timestamp(f"Sold at {strategy.get_price()}")
     time.sleep(2)

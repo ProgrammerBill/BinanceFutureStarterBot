@@ -37,7 +37,7 @@ class BasicBotStrategy:
             if symbol_tmp == self.symbol:
                 qty = float(position["positionAmt"])  # 当前持仓数量
                 if qty != 0:  # 如果持有该合约的仓位不为0，则需要平仓
-                    print("qty is", qty)
+                    #print("qty is", qty)
                     if qty > 0:  # 如果是多头仓位，则需要卖出平仓
                         self.client.futures_create_order(
                             symbol=symbol_tmp,
