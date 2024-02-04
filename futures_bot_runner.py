@@ -132,4 +132,19 @@ while True:
         # 执行平仓操作
         sell_order = strategy.close_all()
         pprint_with_timestamp(f"Sold at {strategy.get_price()}")
+        break
     time.sleep(2)
+
+current_account_info = client.futures_account()
+balance = float(current_account_info["totalWalletBalance"]) - float(
+    account_info["totalWalletBalance"]
+)
+if total_unrealized_pnl > 0:
+    color_code = bcolors.OKGREEN
+else:
+    color_code = bcolors.RED
+pprint_with_timestamp(
+    f"{color_code}最终总盈亏: {balance:.2f} USDT{bcolors.ENDC}"
+)
+
+
